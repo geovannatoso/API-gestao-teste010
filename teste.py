@@ -1,77 +1,106 @@
-import pytest
+import unittest
 import requests
 
-BASE_URL = "http://127.0.0.1:5000/turmas"
+class TestTurmasMethods(unittest.TestCase):
+    
+    BASE_URL = "http://localhost:5000/turmas"
 
-@pytest.fixture
-def turma_exemplo():
-    return {
-        "id": 1,
-        "descricao": "Turma de Português",
-        "professor_id": 101,
-        "activo": True
-    }
+    def test_get_turmas(self):
+        response = requests.get(self.BASE_URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json(), list)
 
-def test001_criar_turma(turma_exemplo):
-    response = requests.post(BASE_URL, json=turma_exemplo)
-    assert response.status_code == 200
-    assert response.json() == turma_exemplo
+    def test_get_turma_sucesso(self):
+        turma = {
+            "id": 1,
+            "descricao": "Turma de Matemática",
+            "professor_id": 101,
+            "activo": True
+        }
+        requests.post(self.BASE_URL, json=turma)
+        response = requests.get(f"{self.BASE_URL}/1")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['id'], 1)
 
-def test002_criar_turma_invalida():
-    response = requests.post(BASE_URL, json={})
-    assert response.status_code == 200  # A API deveria retornar 400
-    assert "erro" in response.json()
+    def test_get_turma_erro(self):
+        response = requests.get(f"{self.BASE_URL}/9999")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['mensagem'], 'Turma não encontrada')
 
-def test003_obter_turma_existente():
-    turma_id = 1
-    response = requests.get(f"{BASE_URL}/{turma_id}")
-    assert response.status_code == 200
-    assert "descricao" in response.json()
+    def test_create_turma_sucesso(self):
+        turma = {
+            "id": 2,
+            "descricao": "Turma de História",
+            "professor_id": 102,
+            "activo": True
+        }
+        response = requests.post(self.BASE_URL, json=turma)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['descricao'], turma['descricao'])
 
-def test004_obter_turma_inexistente():
-    turma_id = 9999
-    response = requests.get(f"{BASE_URL}/{turma_id}")
-    assert response.status_code == 200  # A API deveria retornar 404
-    assert "mensagem" in response.json()
+    def test_create_turma_erro(self):
+        turma = {
+            "descricao": "Turma de Geografia"
+        }
+        response = requests.post(self.BASE_URL, json=turma)
+        self.assertEqual(response.status_code, 200)  
+        self.assertEqual(response.json()['erro'], 'Dados inválidos')
 
-def test005_atualizar_turma_existente():
-    turma_id = 1
-    dados_atualizados = {
-        "descricao": "Turma de Física",
-        "professor_id": 102,
-        "activo": False
-    }
-    response = requests.put(f"{BASE_URL}/{turma_id}", json=dados_atualizados)
-    assert response.status_code == 200
-    assert response.json()["descricao"] == "Turma de Física"
+    def test_update_turma_sucesso(self):
+        turma = {
+            "id": 3,
+            "descricao": "Turma de Física",
+            "professor_id": 103,
+            "activo": True
+        }
+        requests.post(self.BASE_URL, json=turma)
+        updated_turma = {
+            "descricao": "Turma de Física Avançada",
+            "professor_id": 104,
+            "activo": False
+        }
+        response = requests.put(f"{self.BASE_URL}/3", json=updated_turma)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['descricao'], updated_turma['descricao'])
 
-def test006_atualizar_turma_inexistente():
-    turma_id = 9999
-    dados_atualizados = {"descricao": "Turma Fantasma"}
-    response = requests.put(f"{BASE_URL}/{turma_id}", json=dados_atualizados)
-    assert response.status_code == 200  # A API deveria retornar 404
-    assert "mensagem" in response.json()
+    def test_update_turma_erro(self):
+        updated_turma = {
+            "descricao": "Turma de Química",
+            "professor_id": 105,
+            "activo": True
+        }
+        response = requests.put(f"{self.BASE_URL}/9999", json=updated_turma)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['mensagem'], "Turma não encontrada!")
 
-def test007_excluir_turma_existente():
-    turma_id = 1
-    response = requests.delete(f"{BASE_URL}/{turma_id}")
-    assert response.status_code == 200
-    assert "mensagem" in response.json()
+    def test_delete_turmas(self):
+        turma = {
+            "id": 4,
+            "descricao": "Turma de Biologia",
+            "professor_id": 106,
+            "activo": True
+        }
+        requests.post(self.BASE_URL, json=turma)
+        response = requests.delete(self.BASE_URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['mensagem'], 'Todas as turmas foram removidas')
 
-def test008_excluir_turma_inexistente():
-    turma_id = 9999
-    response = requests.delete(f"{BASE_URL}/{turma_id}")
-    assert response.status_code == 200  # A API deveria retornar 404
-    assert "mensagem" in response.json()
+    def test_delete_turma_sucesso(self):
+        turma = {
+            "id": 5,
+            "descricao": "Turma de Artes",
+            "professor_id": 107,
+            "activo": True
+        }
+        requests.post(self.BASE_URL, json=turma)
+        response = requests.delete(f"{self.BASE_URL}/5")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['mensagem'], 'Turma removida')
 
-def test009_excluir_todas_turmas():
-    response = requests.delete(BASE_URL)
-    assert response.status_code == 200
-    assert "mensagem" in response.json()
+    def test_delete_turma_erro(self):
+        response = requests.delete(f"{self.BASE_URL}/9999")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['mensagem'], 'Turma não encontrada')
 
-def test010_listar_todas_turmas(): 
-    response = requests.get(BASE_URL)
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
-    if response.json():
-        assert "descricao" in response.json()[0]
+if __name__ == '__main__':
+    unittest.main()
